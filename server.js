@@ -2,7 +2,6 @@ const express = require('express');
 const http = require('http');
 const WebSocket = require('ws');
 const mongoose = require('mongoose');
-const Location = require('./models/location'); // Assurez-vous que ce chemin est correct
 
 // Configuration de MongoDB
 const mongoUri = 'mongodb+srv://noumsfinoana:mdppsad13@cluster0.gw4zu4y.mongodb.net/delivery?retryWrites=true&w=majority'; // Remplacez par l'URI de votre MongoDB
@@ -28,17 +27,24 @@ wss.on('connection', ws => {
     try {
       const data = JSON.parse(message);
       // Validation des données
-      if (data.latitude && data.longitude) {
+      if (data.latitude && data.longitude && data.delivererId) {
+        console.log('delivererId: ' + data.delivererId);
         console.log('longitude: ' + data.longitude);
         console.log('latitude: ' + data.latitude);
-        
-        // Mise à jour ou insertion dans MongoDB via Mongoose
-        await Location.updateOne(
-          { delivererId: 1 }, // Utilisation de l'identifiant unique pour trouver le document
-          { $set: { latitude: data.latitude, longitude: data.longitude, timestamp: new Date() } },
-          { upsert: true } // Crée un nouveau document si aucun n'est trouvé
+
+        // Accès direct à la collection "livreurs" sans passer par un modèle
+        const collection = mongoose.connection.collection('users');
+        await collection.updateOne(
+          { _id: new mongoose.Types.ObjectId(data.delivererId) }, // Recherche par ObjectId
+          { 
+            $set: { 
+              'currentLocation.latitude': data.latitude, 
+              'currentLocation.longitude': data.longitude
+            } 
+          },
         );
-        console.log('Location updated successfully');
+
+        console.log('Livreur location updated successfully');
       } else {
         console.error('Invalid data format');
       }
