@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const mongoose = require('mongoose');
 const { Server } = require('socket.io');
+const Discussion = require('./models/Chat'); 
 
 // Configuration de MongoDB
 const mongoUri = 'mongodb+srv://noumsfinoana:mdppsad13@cluster0.gw4zu4y.mongodb.net/delivery?retryWrites=true&w=majority'; // Remplacez par l'URI de votre MongoDB
@@ -57,13 +58,51 @@ io.on('connection', (socket) => {
     }
   });
 
+
   // Événement pour la gestion du chat
-  // Événement pour les messages de chat
-  socket.on('sendMessage', (messageData) => {
+  socket.on('sendMessage', async (messageData) => {
     console.log('Message received:', messageData);
-    io.to(messageData.receiverId).emit('receiveMessage', messageData); // Envoie le message au destinataire
+
+    try {
+      // Recherchez ou créez une discussion entre le livreur et le manager
+      console.log(messageData.receiverId);
+      let delivererId = messageData.senderId;
+      let managerId = messageData.receiverId;
+      if(messageData.roleSender == 'manager') {
+        delivererId = messageData.receiverId;
+        managerId = messageData.senderId;
+      }
+      let discussion = await Discussion.findOne({
+        delivererId: messageData.senderId,  // Supposons que le livreur envoie le message
+        managerId: messageData.receiverId   // Supposons que le manager reçoit le message
+      });
+
+      if (!discussion) {
+        discussion = new Discussion({
+          delivererId: delivererId,
+          managerId: managerId,
+          messages: []
+        });
+      }
+
+      // Ajouter le message à la discussion
+      discussion.messages.push({
+        senderId: messageData.senderId,
+        message: messageData.message,
+        timestamp: new Date()
+      });
+
+      // Sauvegarder la discussion mise à jour
+      await discussion.save();
+
+      // Envoyer le message au destinataire
+      io.to(messageData.receiverId).emit('receiveMessage', messageData);
+      console.log('Message saved and sent successfully');
+
+    } catch (error) {
+      console.error('Error saving message', error);
+    }
   });
- 
   socket.on('joinRoom', (roomId) => {
     socket.join(roomId);
     console.log(`Client joined room: ${roomId}`);
