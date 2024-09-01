@@ -65,7 +65,7 @@ io.on('connection', (socket) => {
 
     try {
       // Recherchez ou créez une discussion entre le livreur et le manager
-      console.log(messageData.receiverId);
+      console.log(messageData);
       let delivererId = messageData.senderId;
       let managerId = messageData.receiverId;
       if(messageData.roleSender == 'manager') {
@@ -73,8 +73,8 @@ io.on('connection', (socket) => {
         managerId = messageData.senderId;
       }
       let discussion = await Discussion.findOne({
-        delivererId: messageData.senderId,  // Supposons que le livreur envoie le message
-        managerId: messageData.receiverId   // Supposons que le manager reçoit le message
+        delivererId: delivererId,  // Supposons que le livreur envoie le message
+        managerId: managerId  // Supposons que le manager reçoit le message
       });
 
       if (!discussion) {
